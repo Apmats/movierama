@@ -2,7 +2,6 @@ from flask import Blueprint, Flask, request, jsonify, Response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import sessionmaker
 from models import Base, Users, Movies, Views, Recommendations
-import psycopg2
 import time
 import os
 import csv
@@ -83,6 +82,7 @@ def create_app(spark_context, dataset_path):
         db=DBNAME)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.secret_key = '123123123'
+
     global db
     db = SQLAlchemy(app)
     Base.metadata.create_all(bind=db.engine)
@@ -96,7 +96,7 @@ def init_movie_table(dataset_path):
     Session = sessionmaker(bind=db.engine)
     session = Session()
     if session.query(Movies).first():
-        logger.info("Movie table has entries, skipping population")
+        logger.info("Movie table has entries already, skipping population")
         session.close()
         return
     movies_file_path = os.path.join(dataset_path, 'movies.csv')
@@ -108,6 +108,7 @@ def init_movie_table(dataset_path):
             title_with_year = row['title']
             iter = re.finditer(' \([0123456789]{4}\)', title_with_year)
             try:
+                # get the last occurence of a 4 digit string within parenthesis
                 *_, last_occurence = iter
                 year = int(last_occurence.group()[2:6])
                 title = title_with_year[:last_occurence.start()]
@@ -125,24 +126,25 @@ def retrain():
     Session = sessionmaker(bind=db.engine)
     session = Session()
     users = session.query(Users).all()
+    # get view/interactions after a certain point
     views = session.query(Views).filter(Views.id > last_processed_view_id).order_by(Views.id.asc()).all()
     session.close()
-
+    # send new interactions to the recommender
     ratings = map(lambda view: (view.user_id + local_users_offset,view.movie_id, view.rating), views)
     recommendation_engine.add_ratings(ratings)
     for user in users:
         recommendations = recommendation_engine.get_top_ratings(user.id + local_users_offset, 10)
         Session = sessionmaker(bind=db.engine)
         session = Session()
-        session.query(Users).all()
+        #delete all previous recommendations for user
         session.query(Recommendations).filter(Recommendations.user_id == user.id).delete(synchronize_session='evaluate')
         for recommendation in recommendations:
             new_recommendation = Recommendations(user_id=user.id, movie_id=recommendation[0], rating=recommendation[2])
             session.add(new_recommendation)
         session.commit()
         session.close()
+    # once we're done, if any views were retrieved for processing, move the cursor forward to keep track of them
     if views:
         last_processed_view_id = views[-1].id
     logger.info("Training done up to view with id " + str(last_processed_view_id) + " and will resume from there next training")
-
     return

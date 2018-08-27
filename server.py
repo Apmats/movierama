@@ -14,11 +14,9 @@ def init_spark_context():
     conf = SparkConf().setAppName("movie_recommendation-server")
     # IMPORTANT: pass aditional Python modules to each worker
     sc = SparkContext(conf=conf, pyFiles=['engine.py', 'app.py'])
- 
     return sc
  
 def run_server(app):
- 
     # Enable WSGI access logging via Paste
     app_logged = TransLogger(app)
  
@@ -52,9 +50,12 @@ if __name__ == "__main__":
     sc = init_spark_context()
     dataset_path = os.path.join('datasets', 'ml-latest')
     app = create_app(sc, dataset_path)
+    # load movies.csv into a table if it hasn't been done already
     init_movie_table(dataset_path)
+    # train with the additional views/ratings
     retrain()
-    schedule.every(12).minutes.do(retrain)
+    # and schedule another training every 15 minutes
+    schedule.every(15).minutes.do(retrain)
     ScheduleThread().start()
     # start web server
     run_server(app)
