@@ -1,3 +1,7 @@
+# MovieRama, a simple movie recommendation webapp
+
+## Intro 
+
 We've been asked to develop a small web app that handles movie recommendations based on user preferences.
 
 We have access to the Movielens datasets so a very viable approach is to handle recommendations via CF. A very popular way to implement CF these days, AFAIK, is through matrix factorization, frequently through the ALS algorithm.
@@ -7,11 +11,13 @@ Because, again, this is a widely encountered use case, there are a lot of exampl
 
 Very conveniently, there's already a project/tutorial that guides us through implementing ALS in python using Spark. The project is located here: https://github.com/jadianes/spark-movie-lens/ and apart from the source code, there are also a couple of interesting notebooks that explain the basics of CF, how to build a recommender engine based on Spark's ALS implementation etc. The part about training and discovering the optimal parameters (such as the latent factors/matrix dimensions) for the actual use of the ALS algorithm is particularly interesting. 
 
-Since this is a toy problem, we will simply build upon that project.
+We will simply build upon that project here, since that's a pretty good foundation for our toy project.
 
 The base project is built upon CherryPy, Flask and as mentioned Spark, written obviously in Python. However, it features no persistence at all. We want to get closer to being production ready, even for a toy example, so we add a (dockerized) deployment of Postgresql to persist our data and generated recommendations.
 
 All the work was done in Python 3.7, so make sure to use at least a 3.x version when trying to set this project up.
+
+## Setup 
 
 Install the requirements by running (perhaps under a virtual env)
 
@@ -50,6 +56,8 @@ You should be ready to run the server start script now:
 ./start_server.sh
 ```
 
+## Usage
+
 Now, the following end points are accessible:
 
 a) http://localhost:5430/users/create where a simple GET creates a new user, and returns you an ID for that user. You can then subsequently use that ID to capture their preferences and get recommendations for them.
@@ -80,13 +88,7 @@ d) http://localhost:5430/users/{userId}/recommendations where a simple GET gets 
 [[["movie_id", 86237], ["expected_rating", 5.58396177012906], ["movie_id", 86237], ["title", "Connections"], ["description", "Documentary"], ["year", 1978]], [["movie_id", 165069], ["expected_rating", 5.18385224218535], ["movie_id", 165069], ["title", "Baseball"], ["description", "Documentary"], ["year", 1994]], [["movie_id", 134849], ["expected_rating", 5.15729392105471], ["movie_id", 134849], ["title", "Duck Amuck"], ["description", "Animation|Children|Comedy"], ["year", 1953]], [["movie_id", 26082], ["expected_rating", 5.133645504377], ["movie_id", 26082], ["title", "Harakiri (Seppuku)"], ["description", "Drama"], ["year", 1962]], [["movie_id", 64241], ["expected_rating", 5.13330119611914], ["movie_id", 64241], ["title", "Lonely Wife, The (Charulata)"], ["description", "Drama|Romance"], ["year", 1964]], [["movie_id", 26109], ["expected_rating", 5.10960371753984], ["movie_id", 26109], ["title", "Crooks in Clover (a.k.a. Monsieur Gangster) (Les tontons flingueurs)"], ["description", "Action|Comedy|Crime"], ["year", 1963]], [["movie_id", 82143], ["expected_rating", 5.09552358458852], ["movie_id", 82143], ["title", "Alone in the Wilderness"], ["description", "Documentary"], ["year", 2004]], [["movie_id", 159817], ["expected_rating", 5.09314152094635], ["movie_id", 159817], ["title", "Planet Earth"], ["description", "Documentary"], ["year", 2006]], [["movie_id", 3739], ["expected_rating", 5.08522735111204], ["movie_id", 3739], ["title", "Trouble in Paradise"], ["description", "Comedy|Romance"], ["year", 1932]], [["movie_id", 25975], ["expected_rating", 5.07998912787381], ["movie_id", 25975], ["title", "Life of Oharu, The (Saikaku ichidai onna)"], ["description", "Drama"], ["year", 1952]]]
 ```
 
-
-
-
-
-
-
-Quick rundown of the app:
+## Quick rundown of the app:
 
 See the revelant notebooks from the original project, these do a much better job of explaining both the recommender as well as the web server setup. In order to achieve the outlined functionality for the assignment, we had to do the following additional work:
 
@@ -106,13 +108,7 @@ For this part, we also had to slightly modify the recommender implementation of 
 Furthermore, in order to avoid collisions between the Movieles user IDs and our own internal ones (which refer to different sets of users) we add an offset of 1 million to our internal user ID before mixing them up with the Movielens IDs. Small thing but mentioned here as it might be a bit puzzling if encountered in the code.
 
 
-
-
-
-
-
-
-Drawbacks of current implementatin:
+## Drawbacks of current implementation:
 
 
 We haven't investigated the best strategy to handle cold starts (ie. new user, gets no recommendations). We generally will need a fallback strategy to handle such cases. One such fallback could be to suggest the universally most popular films to a user with little or no preferences.
